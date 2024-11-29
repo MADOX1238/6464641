@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ar"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>الصفحة الرئيسية</title> 
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #4267B2;
+      color: white;
+      padding: 20px 0;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .container {
+      margin: 20px auto;
+      max-width: 800px;
+      text-align: center;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .username {
+      font-weight: bold;
+      animation: color-change 2s infinite;
+      cursor: pointer;
+    }
+    .username:hover {
+      color: #f39c12;
+    }
+    .publish-message {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #4267B2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .publish-message:hover {
+      background-color: #365899;
+    }
+    .input-message {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .logout-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #4267B2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .logout-button:hover {
+      background-color: #365899;
+    }
+    .timestamp {
+      font-size: 12px;
+      color: gray;
+    }
+    @keyframes color-change {
+      0% { color: #4267B2; }
+      50% { color: #f39c12; }
+      100% { color: #e74c3c; }
+    }
+  </style> 
+ </head> 
+ <body> 
+  <header>
+    Spherely 
+  </header> 
+  <div class="container" id="main-container"> 
+   <p class="welcome-message">مرحبًا بك في تطبيق Spherely!</p> 
+   <textarea class="input-message" id="message-input" placeholder="اكتب رسالتك هنا..."></textarea> 
+   <button class="publish-message" id="publish-button">نشر الرسالة</button> 
+   <div id="messages-container"> <!-- الرسائل ستظهر هنا --> 
+   </div> 
+   <button class="logout-button" id="logout-button">تسجيل الخروج</button> 
+  </div> 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, set, get, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCnHSUo_Vu53NidFWYlQ74_CyOyfVW_BqQ",
+      authDomain: "alaah-8d503.firebaseapp.com",
+      databaseURL: "https://alaah-8d503-default-rtdb.firebaseio.com",
+      projectId: "alaah-8d503",
+      storageBucket: "alaah-8d503.appspot.com",
+      messagingSenderId: "365922482892",
+      appId: "1:365922482892:web:a843fbb3594d200c67e069",
+      measurementId: "G-D4TPJW4RT8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    if (!sessionStorage.getItem('loggedIn')) {
+      window.location.href = "spherely.html";
+    }
+
+    document.getElementById('logout-button').addEventListener('click', () => {
+      sessionStorage.removeItem('loggedIn');
+      alert('تم تسجيل الخروج بنجاح!');
+      window.location.href = "spherely.html";
+    });
+
+    document.getElementById('publish-button').addEventListener('click', () => {
+      const message = document.getElementById('message-input').value;
+      const username = sessionStorage.getItem('username');
+
+      if (message.trim() !== '') {
+        const newMessageKey = push(ref(database, 'messages')).key;
+        set(ref(database, 'messages/' + newMessageKey), {
+          username: username,
+          message: message,
+          timestamp: new Date().toISOString()
+        });
+        document.getElementById('message-input').value = '';
+      } else {
+        alert('من فضلك أدخل رسالة!');
+      }
+    });
+
+    function timeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      const intervals = [
+        { label: 'سنة', seconds: 31536000 },
+        { label: 'شهر', seconds: 2592000 },
+        { label: 'أسبوع', seconds: 604800 },
+        { label: 'يوم', seconds: 86400 },
+        { label: 'ساعة', seconds: 3600 },
+        { label: 'دقيقة', seconds: 60 },
+        { label: 'ثانية', seconds: 1 },
+      ];
+      
+      for (const interval of intervals) {
+        const count = Math.floor(seconds / interval.seconds);
+        if (count > 0) {
+          return `منذ ${count} ${interval.label}${count > 1 ? '' : ''}`;
+        }
+      }
+      return 'الآن';
+    }
+
+    const messagesContainer = document.getElementById('messages-container');
+
+    // هذا هو الكود لإضافة مستمع للرسائل الجديدة بشكل تلقائي
+    onChildAdded(ref(database, 'messages'), (data) => {
+      const messageData = data.val();
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+
+      messageElement.innerHTML = `
+        <span class="username">${messageData.username}</span>: <span>${messageData.message}</span>
+        <br><span class="timestamp">${timeAgo(new Date(messageData.timestamp))}</span>
+      `;
+
+      messagesContainer.appendChild(messageElement);
+    });
+
+    // تحميل الرسائل عند تحميل الصفحة لأول مرة
+    get(ref(database, 'messages')).then((snapshot) => {
+      if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+          const messageData = childSnapshot.val();
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('message');
+
+          messageElement.innerHTML = `
+            <span class="username">${messageData.username}</span>: <span>${messageData.message}</span>
+            <br><span class="timestamp">${timeAgo(new Date(messageData.timestamp))}</span>
+          `;
+
+          messagesContainer.appendChild(messageElement);
+        });
+      } else {
+        messagesContainer.innerHTML = 'لا توجد رسائل بعد.';
+      }
+    });
+  </script> 
+ 
+</body></html>
